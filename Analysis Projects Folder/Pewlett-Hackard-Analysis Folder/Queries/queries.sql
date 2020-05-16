@@ -139,3 +139,85 @@ ON (ri.emp_no = de.emp_no)
 INNER JOIN departments AS d
 ON (de.dept_no = d.dept_no)
 WHERE dept_name IN ('Sales', 'Development');
+
+SELECT ri.emp_no,
+ri.first_name,
+ri.last_name,
+ti.title,
+ti.from_date,
+sa.salary
+INTO num_ret_title
+FROM retirement_info as ri
+INNER JOIN titles as ti
+ON ri.emp_no = ti.emp_no
+INNER JOIN salaries as sa
+ON ri.emp_no = sa.emp_no
+
+SELECT * FROM num_ret_title;
+
+-- Partition the data to show only the most recent title per employee
+SELECT emp_no,
+first_name,
+last_name,
+title,
+from_date,
+salary
+INTO num_ret_title_dedup
+FROM
+(SELECT emp_no,
+first_name,
+last_name,
+title,
+from_date,
+salary, ROW_NUMBER() OVER
+(PARTITION BY (emp_no)
+ORDER BY from_date DESC) rn
+ FROM num_ret_title
+ ) tmp WHERE rn = 1
+ORDER BY emp_no;
+
+SELECT COUNT(title), title
+INTO num_emp_title_ret
+FROM num_ret_title_dedup
+GROUP BY title	
+ORDER BY title;
+
+SELECT title
+INTO titles_ret
+FROM num_ret_title_dedup
+GROUP BY title	
+ORDER BY title;
+
+SELECT em.emp_no,
+em.first_name,
+em.last_name,
+ti.title,
+ti.from_date,
+ti.to_date
+INTO mentor_eligible
+FROM employees as em
+INNER JOIN titles as ti
+ON em.emp_no = ti.emp_no
+WHERE (em.birth_date BETWEEN '1965-01-01' and '1965-12-31')
+AND (ti.to_date = ('9999-01-01'));
+
+-- Partition the data to show only the most recent title per employee
+SELECT emp_no,
+first_name,
+last_name,
+title,
+from_date,
+to_date
+INTO mentor_eligible_dedup
+FROM
+(SELECT emp_no,
+first_name,
+last_name,
+title,
+from_date,
+to_date, ROW_NUMBER() OVER
+(PARTITION BY (emp_no)
+ORDER BY to_date DESC) rn
+ FROM mentor_eligible
+ ) tmp WHERE rn = 1
+ORDER BY emp_no;
